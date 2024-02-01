@@ -1,8 +1,8 @@
 PROJECT = stm32f0-firmware
 
 MCU_FAMILY        = STM32F0xx
-MCU_MODEL_FAMILY  = STM32F051x8
-MCU_MODEL         = STM32F051R8
+MCU_MODEL_FAMILY  = STM32F072xb
+MCU_MODEL         = STM32F072R8
 
 include ./lib/CMSIS.mk
 include ./lib/HAL.mk
