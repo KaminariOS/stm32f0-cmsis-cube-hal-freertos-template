@@ -1,4 +1,6 @@
 #include "stm32f0xx.h"
+#include "stm32f0xx_hal_gpio.h"
+#include "stm32f0xx_hal_rcc.h"
 #include "cmsis_os.h"
 
 void SystemClock_Config(void);
@@ -6,28 +8,78 @@ static void MX_GPIO_Init(void);
 static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
-int main(void) {
+/// Spin delay
+void delay(int count)
+{
+    // volatile so that the compiler doesn't optimise it out
+    volatile int i;
 
-    // Reset of all peripherals, Initializes the Flash interface and the Systick
+    for (i = 0; i < count; i++)
+    {
+    }
+}
+
+/// Main function.  Called by the startup code.
+int main(void)
+{
+
+    /* GPIOC Periph clock enable */
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
     HAL_Init();
+    uint16_t pin_mask = GPIO_PIN_6 | GPIO_PIN_7;
 
-    // Configure the system clock
-    SystemClock_Config();
+    GPIOA->MODER |= (GPIO_MODE_INPUT);
+    GPIOA->OSPEEDR |= (GPIO_SPEED_LOW);
+    GPIOA->PUPDR |= (GPIO_PULLDOWN);
 
-    // System interrupt init
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+    for (uint32_t pinpos = 0x00; pinpos < 0x10; pinpos++) {
+        uint32_t pos = ((uint32_t)0x01) << pinpos;
+        uint32_t currentpin = pin_mask & pos;
+        if (currentpin == pos) {
+            GPIOC->MODER |= (GPIO_MODE_OUTPUT_PP << (pinpos * 2));
+            GPIOC->OTYPER |= (0 << pinpos)   ;
+            GPIOC->OSPEEDR |= (GPIO_SPEED_LOW << (pinpos * 2)); 
+            GPIOC->PUPDR |= (GPIO_NOPULL << (pinpos * 2));
+        }
+    }
 
-    // Initialize all configured peripherals
-    MX_GPIO_Init();
+    uint32_t debouncer = 0;
+    for (;;)
+    {
+      debouncer = (debouncer << 1);
 
-    osThreadDef(User_thread, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
-    osThreadDef(CheckButton_thread, CheckButtonThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
-    osThreadCreate(osThread(User_thread), NULL);
-    osThreadCreate(osThread(CheckButton_thread), NULL);
-    osKernelStart(NULL, NULL);
+      int singal = GPIOA->IDR & GPIO_IDR_0;
+      if (singal) {
+          debouncer |= 1;
+      } 
 
-    while (1) {
+      if (debouncer != 0xFFFFFFFF) {
+          // Turn off the first led
+          GPIOC->BRR = GPIO_PIN_6;
+          GPIOC->BSRRL = GPIO_PIN_7;
+      }
 
+      if (debouncer == 0) {
+          GPIOC->BRR = GPIO_PIN_7;
+          GPIOC->BSRRL = GPIO_PIN_6;
+      }
+      // Turn on both LEDs
+      // GPIOC->BSRR = GPIO_Pin_6 | GPIO_Pin_7;
+
+      // Around 1/4 of a second
+      // delay(2400000);
+
+
+      // delay(2400000);
+
+      // Turn off the second LED and the on the first
+
+      // delay(2400000);
+
+      // Turn off first
+      // GPIOC->BRR = 0x0100;
+
+      HAL_Delay(1);
     }
 }
 
