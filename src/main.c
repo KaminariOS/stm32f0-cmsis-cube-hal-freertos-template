@@ -8,17 +8,6 @@ static void MX_GPIO_Init(void);
 static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
-/// Spin delay
-void delay(int count)
-{
-    // volatile so that the compiler doesn't optimise it out
-    volatile int i;
-
-    for (i = 0; i < count; i++)
-    {
-    }
-}
-
 /// Main function.  Called by the startup code.
 int main(void)
 {
@@ -26,7 +15,7 @@ int main(void)
     /* GPIOC Periph clock enable */
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
     HAL_Init();
-    uint16_t pin_mask = GPIO_PIN_6 | GPIO_PIN_7;
+    uint16_t pin_mask = GPIO_PIN_8 | GPIO_PIN_9;
 
     GPIOA->MODER |= (GPIO_MODE_INPUT);
     GPIOA->OSPEEDR |= (GPIO_SPEED_LOW);
@@ -43,34 +32,20 @@ int main(void)
         }
     }
 
-    uint32_t debouncer = 0;
+    int flip = 0;
     for (;;)
     {
-      debouncer = (debouncer << 1);
-
-      int singal = GPIOA->IDR & GPIO_IDR_0;
-      if (singal) {
-          debouncer |= 1;
-      } 
-
-      if (debouncer != 0xFFFFFFFF) {
+      flip = ~flip; 
+      if (flip) {
           // Turn off the first led
-          GPIOC->BRR = GPIO_PIN_6;
-          GPIOC->BSRRL = GPIO_PIN_7;
-      }
-
-      if (debouncer == 0) {
-          GPIOC->BRR = GPIO_PIN_7;
-          GPIOC->BSRRL = GPIO_PIN_6;
+          GPIOC->BRR = GPIO_PIN_8;
+          GPIOC->BSRRL = GPIO_PIN_9;
+      } else {
+          GPIOC->BRR = GPIO_PIN_9;
+          GPIOC->BSRRL = GPIO_PIN_8;
       }
       // Turn on both LEDs
       // GPIOC->BSRR = GPIO_Pin_6 | GPIO_Pin_7;
-
-      // Around 1/4 of a second
-      // delay(2400000);
-
-
-      // delay(2400000);
 
       // Turn off the second LED and the on the first
 
@@ -79,7 +54,7 @@ int main(void)
       // Turn off first
       // GPIOC->BRR = 0x0100;
 
-      HAL_Delay(1);
+      HAL_Delay(240);
     }
 }
 
