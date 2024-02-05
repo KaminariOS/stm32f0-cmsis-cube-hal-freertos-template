@@ -7,27 +7,23 @@ static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
 int main(void) {
-
+    
     // Reset of all peripherals, Initializes the Flash interface and the Systick
     HAL_Init();
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
 
-    // Configure the system clock
-    SystemClock_Config();
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8|GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    // System interrupt init
-    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-
-    // Initialize all configured peripherals
-    MX_GPIO_Init();
-
-    osThreadDef(User_thread, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
-    osThreadDef(CheckButton_thread, CheckButtonThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
-    osThreadCreate(osThread(User_thread), NULL);
-    osThreadCreate(osThread(CheckButton_thread), NULL);
-    osKernelStart(NULL, NULL);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
 
     while (1) {
-
+        HAL_Delay(400);
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
     }
 }
 
@@ -128,6 +124,10 @@ extern void xPortSysTickHandler(void);
 void SysTick_Handler(void) {
     if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
         xPortSysTickHandler();
+    }
+    uint32_t ticks = HAL_GetTick();
+    if (ticks % 200 == 0) {
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
     }
     HAL_IncTick();
 }
