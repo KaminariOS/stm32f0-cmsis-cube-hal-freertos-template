@@ -6,11 +6,22 @@ static void MX_GPIO_Init(void);
 static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
+void EXTI0_1_IRQHandler() {
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+    EXTI->PR |= EXTI_PR_PR0; 
+}
+
 int main(void) {
     
     // Reset of all peripherals, Initializes the Flash interface and the Systick
     HAL_Init();
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
+    // Enable peri clock for syscfg
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; 
+
+    NVIC_EnableIRQ(EXTI0_1_IRQn);
+    NVIC_SetPriority(EXTI0_1_IRQn, 1);
 
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8|GPIO_PIN_9;
@@ -18,6 +29,14 @@ int main(void) {
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    // PA0
+    GPIOA->MODER |= (GPIO_MODE_INPUT);  
+    GPIOA->PUPDR |= GPIO_PULLDOWN;
+    GPIOA->OSPEEDR |= GPIO_SPEED_LOW;
+
+    EXTI->IMR |= EXTI_PR_PR0;
+    EXTI->RTSR |= EXTI_PR_PR0;
 
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
 
