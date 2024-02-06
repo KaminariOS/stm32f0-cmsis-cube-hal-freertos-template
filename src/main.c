@@ -8,6 +8,9 @@ static void CheckButtonThread(void const * argument);
 
 void EXTI0_1_IRQHandler() {
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+    for (volatile int i = 0; i < 1500000; i++) {}
+    // HAL_Delay(15);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
     EXTI->PR |= EXTI_PR_PR0; 
 }
 
@@ -15,13 +18,15 @@ int main(void) {
     
     // Reset of all peripherals, Initializes the Flash interface and the Systick
     HAL_Init();
+    SystemClock_Config();
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
     // Enable peri clock for syscfg
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
     SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; 
 
     NVIC_EnableIRQ(EXTI0_1_IRQn);
-    NVIC_SetPriority(EXTI0_1_IRQn, 1);
+    NVIC_SetPriority(EXTI0_1_IRQn, 3);
+    NVIC_SetPriority(SysTick_IRQn, 2);
 
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8|GPIO_PIN_9;
@@ -141,9 +146,9 @@ static void CheckButtonThread(void const * argument) {
 extern void xPortSysTickHandler(void);
 
 void SysTick_Handler(void) {
-    if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
-        xPortSysTickHandler();
-    }
+    // if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
+    //     xPortSysTickHandler();
+    // }
     uint32_t ticks = HAL_GetTick();
     if (ticks % 200 == 0) {
         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
