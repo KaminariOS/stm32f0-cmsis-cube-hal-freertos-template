@@ -7,11 +7,17 @@ static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
 void EXTI0_1_IRQHandler() {
+    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+    // for (volatile int i = 0; i < 1500000; i++) {}
+    // // HAL_Delay(15);
+    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+    // EXTI->PR |= EXTI_PR_PR0; 
+}
+
+void TIM2_IRQHandler() {
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
-    for (volatile int i = 0; i < 1500000; i++) {}
-    // HAL_Delay(15);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
-    EXTI->PR |= EXTI_PR_PR0; 
+    // Todo
+    TIM2->SR &= ~TIM_SR_UIF;
 }
 
 int main(void) {
@@ -20,6 +26,13 @@ int main(void) {
     HAL_Init();
     SystemClock_Config();
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
+
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2->PSC = 3 * 8000;
+    TIM2->ARR = 500;
+    TIM2->DIER |= TIM_DIER_UIE;
+    // TIM2->SMCR
+
     // Enable peri clock for syscfg
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
     SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; 
@@ -28,12 +41,18 @@ int main(void) {
     NVIC_SetPriority(EXTI0_1_IRQn, 3);
     NVIC_SetPriority(SysTick_IRQn, 2);
 
+    NVIC_EnableIRQ(TIM2_IRQn);
+    NVIC_SetPriority(TIM2_IRQn, 3);
+
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8|GPIO_PIN_9;
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8| GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+
+    TIM2->CR1 |= TIM_CR1_CEN;
 
     // PA0
     GPIOA->MODER |= (GPIO_MODE_INPUT);  
