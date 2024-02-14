@@ -16,7 +16,7 @@ void EXTI0_1_IRQHandler() {
 
 void TIM2_IRQHandler() {
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
-    // Todo
+    
     TIM2->SR &= ~TIM_SR_UIF;
 }
 
@@ -24,14 +24,15 @@ int main(void) {
     
     // Reset of all peripherals, Initializes the Flash interface and the Systick
     HAL_Init();
-    SystemClock_Config();
+    // SystemClock_Config();
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
 
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2->PSC = 3 * 8000;
-    TIM2->ARR = 500;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN;
+    TIM2->PSC =  8000;
+    TIM2->ARR = 250;
     TIM2->DIER |= TIM_DIER_UIE;
     // TIM2->SMCR
+    
 
     // Enable peri clock for syscfg
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
@@ -45,12 +46,33 @@ int main(void) {
     NVIC_SetPriority(TIM2_IRQn, 3);
 
     GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8| GPIO_PIN_9;
+    GPIO_InitStruct.Pin = GPIO_PIN_8| GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    // TODO
+    //
+    GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL6;
+    GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL7;
+    
+    TIM3->PSC = 99;
+    TIM3->ARR = 100;
+    TIM3->CCMR1 &= ~TIM_CCMR1_CC1S;
+    TIM3->CCMR1 &= ~TIM_CCMR1_CC2S;
+    TIM3->CCMR1 |= (TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+    TIM3->CCMR1 |= (TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1);
+    TIM3->CCMR1 &= ~(TIM_CCMR1_OC2M_0);
+    TIM3->CCMR1 |= TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE;
+    TIM3->CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E;
+    TIM3->CCR1 |= 10;
+    TIM3->CCR2 |= 10;
+    TIM3->CR1 |= TIM_CR1_CEN;
 
     TIM2->CR1 |= TIM_CR1_CEN;
 
@@ -66,7 +88,7 @@ int main(void) {
 
     while (1) {
         HAL_Delay(400);
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+        // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
     }
 }
 
@@ -170,7 +192,7 @@ void SysTick_Handler(void) {
     // }
     uint32_t ticks = HAL_GetTick();
     if (ticks % 200 == 0) {
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
+        // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
     }
     HAL_IncTick();
 }
