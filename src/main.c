@@ -6,18 +6,26 @@ static void MX_GPIO_Init(void);
 static void StartThread(void const * argument);
 static void CheckButtonThread(void const * argument);
 
-void EXTI0_1_IRQHandler() {
-    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
-    // for (volatile int i = 0; i < 1500000; i++) {}
-    // // HAL_Delay(15);
-    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
-    // EXTI->PR |= EXTI_PR_PR0; 
-}
-
+// void EXTI0_1_IRQHandler() {
+//     // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+//     // for (volatile int i = 0; i < 1500000; i++) {}
+//     // // HAL_Delay(15);
+//     // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+//     // EXTI->PR |= EXTI_PR_PR0; 
+// }
+//
 void TIM2_IRQHandler() {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
+    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8);
     
     TIM2->SR &= ~TIM_SR_UIF;
+}
+
+void send_char(char c) {
+    while (!(USART3->ISR & USART_ISR_TXE)) {
+        // HAL_Delay(400);
+        // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+    }
+    USART3->TDR = c;
 }
 
 int main(void) {
@@ -25,25 +33,25 @@ int main(void) {
     // Reset of all peripherals, Initializes the Flash interface and the Systick
     HAL_Init();
     // SystemClock_Config();
-    RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOAEN;
 
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN;
-    TIM2->PSC =  8000;
-    TIM2->ARR = 250;
-    TIM2->DIER |= TIM_DIER_UIE;
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN | RCC_APB1ENR_USART3EN;
+    // TIM2->PSC =  8000;
+    // TIM2->ARR = 250;
+    // TIM2->DIER |= TIM_DIER_UIE;
     // TIM2->SMCR
     
 
     // Enable peri clock for syscfg
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-    SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; 
-
-    NVIC_EnableIRQ(EXTI0_1_IRQn);
-    NVIC_SetPriority(EXTI0_1_IRQn, 3);
-    NVIC_SetPriority(SysTick_IRQn, 2);
-
-    NVIC_EnableIRQ(TIM2_IRQn);
-    NVIC_SetPriority(TIM2_IRQn, 3);
+    // RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    // SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; 
+    //
+    // NVIC_EnableIRQ(EXTI0_1_IRQn);
+    // NVIC_SetPriority(EXTI0_1_IRQn, 3);
+    // NVIC_SetPriority(SysTick_IRQn, 2);
+    //
+    // NVIC_EnableIRQ(TIM2_IRQn);
+    // NVIC_SetPriority(TIM2_IRQn, 3);
 
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Pin = GPIO_PIN_8| GPIO_PIN_9;
@@ -52,43 +60,59 @@ int main(void) {
     GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+    // GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+    // GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    // GPIO_InitStruct.Pull = GPIO_NOPULL;
+    // HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    // // TODO
+    // //
+    // GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL6;
+    // GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL7;
+
+
+    GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_11;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-    // TODO
-    //
-    GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL6;
-    GPIOC->AFR[0] &= ~GPIO_AFRL_AFRL7;
+    // GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIOB->AFR[1] |= 0x00000400 ;
+    GPIOB->AFR[1] |= 0x00004000;
+    uint32_t sysclk = HAL_RCC_GetHCLKFreq();
+    uint32_t target_baud = 115200;
+    // Default oversample = 16
+    uint32_t brr = sysclk / target_baud;
+    USART3->BRR = 69;
+    USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
     
-    TIM3->PSC = 99;
-    TIM3->ARR = 100;
-    TIM3->CCMR1 &= ~TIM_CCMR1_CC1S;
-    TIM3->CCMR1 &= ~TIM_CCMR1_CC2S;
-    TIM3->CCMR1 |= (TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
-    TIM3->CCMR1 |= (TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1);
-    TIM3->CCMR1 &= ~(TIM_CCMR1_OC2M_0);
-    TIM3->CCMR1 |= TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE;
-    TIM3->CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E;
-    TIM3->CCR1 |= 10;
-    TIM3->CCR2 |= 10;
-    TIM3->CR1 |= TIM_CR1_CEN;
+    // TIM3->PSC = 99;
+    // TIM3->ARR = 100;
+    // TIM3->CCMR1 &= ~TIM_CCMR1_CC1S;
+    // TIM3->CCMR1 &= ~TIM_CCMR1_CC2S;
+    // TIM3->CCMR1 |= (TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
+    // TIM3->CCMR1 |= (TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1);
+    // TIM3->CCMR1 &= ~(TIM_CCMR1_OC2M_0);
+    // TIM3->CCMR1 |= TIM_CCMR1_OC1PE | TIM_CCMR1_OC2PE;
+    // TIM3->CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E;
+    // TIM3->CCR1 |= 10;
+    // TIM3->CCR2 |= 10;
+    // TIM3->CR1 |= TIM_CR1_CEN;
+    //
+    // TIM2->CR1 |= TIM_CR1_CEN;
+    //
+    // // PA0
+    // GPIOA->MODER |= (GPIO_MODE_INPUT);  
+    // GPIOA->PUPDR |= GPIO_PULLDOWN;
+    // GPIOA->OSPEEDR |= GPIO_SPEED_LOW;
+    //
+    // EXTI->IMR |= EXTI_PR_PR0;
+    // EXTI->RTSR |= EXTI_PR_PR0;
 
-    TIM2->CR1 |= TIM_CR1_CEN;
-
-    // PA0
-    GPIOA->MODER |= (GPIO_MODE_INPUT);  
-    GPIOA->PUPDR |= GPIO_PULLDOWN;
-    GPIOA->OSPEEDR |= GPIO_SPEED_LOW;
-
-    EXTI->IMR |= EXTI_PR_PR0;
-    EXTI->RTSR |= EXTI_PR_PR0;
-
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+    // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
 
     while (1) {
         HAL_Delay(400);
-        // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+        send_char('c');
     }
 }
 

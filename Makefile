@@ -171,7 +171,7 @@ IINCDIR   = $(patsubst %,-I%,$(INCDIR) $(DINCDIR) $(UINCDIR))
 LLIBDIR   = $(patsubst %,-L%,$(DLIBDIR) $(ULIBDIR))
 
 # Macros
-DEFS      = $(DDEFS) $(UDEFS)
+DEFS      = $(DDEFS) $(UDEFS) -DSTM32F072xB
 ADEFS 	  = $(DADEFS) $(UADEFS)
 
 # Libs
